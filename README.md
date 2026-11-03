@@ -11,6 +11,7 @@ Mi carrera de **Ingeniería en Inteligencia Artificial y Ciencia de Datos (UNAD)
 ## Arquitectura
 - `public/` — app estática (HTML/JS, service worker, manifest).
 - `src/worker.js` — Worker: sirve los assets y `/api/sync` (D1, last-write-wins). Valida el JWT de Cloudflare Access.
+- Vive en **unad.zylarion.io** (dominio propio del Worker; `workers.dev` desactivado).
 - Acceso protegido con **Cloudflare Access** (solo mi correo + WARP obligatorio).
 - Despliegue automático con Workers Builds en cada push a `main`.
 
