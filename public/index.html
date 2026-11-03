@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>UNAD Quest</title>
+<meta name="description" content="Mi carrera de Ingeniería en IA y Ciencia de Datos (UNAD) como un juego: malla, agenda y cuadernos.">
+<meta name="theme-color" content="#0b0d17">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="UNAD Quest">
+<link rel="manifest" href="/manifest.webmanifest" crossorigin="use-credentials">
+<link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=JetBrains+Mono:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0b0d17; --panel:#141829; --panel2:#1b2036; --line:#2a3152;
+  --text:#e8ebff; --muted:#8e96c2; --accent:#7cf6c3; --accent2:#ffcc4d; --danger:#ff6b8b;
+  --mate:#5b8cff; --prog:#ffb84d; --ing:#3ddc97; --datos:#ff7a59; --ia:#b388ff; --nube:#4dd6e8; --gen:#c7cce8; --elec:#ff8fd8; --ingl:#9b6bd1;
+  --radius:14px; --safe-b:env(safe-area-inset-bottom,0px); --safe-t:env(safe-area-inset-top,0px);
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--text);font-family:"JetBrains Mono",ui-monospace,monospace;font-size:14px;line-height:1.45;
+  background-image:radial-gradient(circle at 15% -10%,#1d2450 0,transparent 45%),radial-gradient(circle at 110% 10%,#2a1846 0,transparent 40%);background-attachment:fixed;
+  padding-top:var(--safe-t)}
+.wrap{max-width:1280px;margin:0 auto;padding:16px 16px calc(90px + var(--safe-b))}
+h1,h2,.pixel{font-family:"Press Start 2P",monospace;letter-spacing:.5px}
+input,select,textarea,button{font:inherit;color:inherit}
+input,select,textarea{background:#0f1222;border:1px solid var(--line);border-radius:10px;padding:8px 10px;min-width:0}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
+button,.btn{background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:8px 12px;cursor:pointer;transition:.15s}
+button:hover{border-color:var(--accent);color:var(--accent)}
+button.on{background:var(--accent);color:#06281b;border-color:var(--accent);font-weight:800}
+button.primary{background:var(--accent);color:#06281b;border-color:var(--accent);font-weight:800}
+button.ghost{background:transparent}
+button.danger:hover{border-color:var(--danger);color:var(--danger)}
+.muted{color:var(--muted)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px}
+[hidden]{display:none!important}
+
+/* top bar */
+.topbar{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.topbar h1{font-size:clamp(12px,2.2vw,18px);margin:0;line-height:1.5}
+.topbar h1 span{color:var(--accent)}
+.tabs{display:flex;gap:6px;margin-left:auto}
+.tabs button{padding:8px 14px}
+.sync{font-size:11px;color:var(--muted);white-space:nowrap;cursor:pointer;border:1px solid var(--line);border-radius:999px;padding:4px 10px}
+.sync.ok{color:var(--accent)} .sync.err{color:var(--danger);border-color:#7a2d43} .sync.busy{color:var(--accent2)}
+.bottomnav{display:none}
+.banner{background:#3a1a26;border:1px solid #7a2d43;color:#ffd7e0;border-radius:12px;padding:10px 14px;margin-bottom:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.banner button{margin-left:auto}
+
+/* ===== MALLA ===== */
+.hud{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px}
+.stat .k{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:1px}
+.stat .v{font-family:"Press Start 2P";font-size:clamp(13px,2vw,18px);margin-top:8px}
+.stat .s{color:var(--muted);font-size:12px;margin-top:6px}
+.xpbar{height:16px;background:#0a0c16;border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-top:10px;position:relative}
+.xpbar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),#4dd6e8);transition:width .6s cubic-bezier(.2,.9,.3,1.2)}
+.xpbar.gold i{background:linear-gradient(90deg,var(--accent2),#ff8f4d)}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:14px 0}
+.toolbar .spacer{flex:1}
+.legend{display:flex;flex-wrap:wrap;gap:10px;font-size:12px;color:var(--muted)}
+.legend b{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.board{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(230px,1fr);gap:12px;overflow-x:auto;padding-bottom:12px;scroll-snap-type:x proximity;margin-top:12px}
+.col{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:12px;scroll-snap-align:start;display:flex;flex-direction:column;gap:8px;min-height:200px}
+.col.inten{background:linear-gradient(180deg,#221a35,#161427);border-color:#4b3a78}
+.col.current{outline:2px solid var(--accent2);outline-offset:2px}
+.col h3{margin:0;font-family:"Press Start 2P";font-size:10px;line-height:1.6}
+.col .meta{display:flex;justify-content:space-between;color:var(--muted);font-size:11px}
+.col .meta .done{color:var(--accent)}
+.tag{display:inline-block;font-size:10px;padding:2px 6px;border-radius:5px;background:#4b3a78;color:#e3d6ff;margin-left:4px;font-family:"JetBrains Mono"}
+.course{position:relative;background:var(--panel2);border:1px solid var(--line);border-left:5px solid var(--c,var(--gen));border-radius:10px;padding:9px 10px 9px 12px;cursor:pointer;user-select:none;-webkit-user-select:none;transition:transform .12s,border-color .12s,opacity .2s;-webkit-touch-callout:none}
+.course:hover{transform:translateY(-2px);border-color:var(--c)}
+.course .n{font-weight:600;font-size:12.5px;padding-right:22px}
+.course .m{color:var(--muted);font-size:11px;margin-top:3px;display:flex;gap:8px;flex-wrap:wrap}
+.course .m .tk{color:var(--accent2)}
+.course .st{position:absolute;top:8px;right:9px;font-size:13px}
+.course.done{background:linear-gradient(90deg,#123528,#16243a);border-color:#2f7d5e}
+.course.done .n{text-decoration:line-through;text-decoration-color:#7cf6c399}
+.course.doing{background:linear-gradient(90deg,#3a2f0f,#1f2138);border-color:var(--accent2);box-shadow:0 0 0 1px #ffcc4d44 inset}
+.course.locked{opacity:.55}
+.course.hl-pre{box-shadow:0 0 0 2px var(--accent2),0 0 18px #ffcc4d55}
+.course.hl-post{box-shadow:0 0 0 2px var(--nube),0 0 18px #4dd6e855}
+.course.hl-self{box-shadow:0 0 0 2px #fff}
+.course.dim{opacity:.25}
+.course.homolog{border-style:dashed}
+.side{display:grid;grid-template-columns:1.3fr 1fr;gap:12px;margin-top:14px}
+.ach{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-top:10px}
+.badge{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px;text-align:center;filter:grayscale(1);opacity:.45;transition:.3s}
+.badge.got{filter:none;opacity:1;border-color:var(--accent2);box-shadow:0 0 14px #ffcc4d33}
+.badge .i{font-size:24px}
+.badge .t{font-size:11px;font-weight:800;margin-top:4px}
+.badge .d{font-size:10px;color:var(--muted);margin-top:2px}
+.lines .row{display:grid;grid-template-columns:120px 1fr 52px;gap:8px;align-items:center;font-size:12px;margin:7px 0}
+.lines .row .xpbar{margin:0;height:10px}
+.lines .row i{background:var(--c)}
+.detail{min-height:140px}
+.detail h4{margin:0 0 6px;font-size:14px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.chip{font-size:11px;padding:3px 7px;border-radius:6px;background:#0f1222;border:1px solid var(--line)}
+.chip.ok{border-color:#2f7d5e;color:var(--accent)}
+.chip.no{border-color:#7a2d43;color:var(--danger)}
+.countdown{font-family:"Press Start 2P";font-size:clamp(14px,2.4vw,20px);color:var(--accent2);margin-top:8px}
+
+/* ===== AGENDA ===== */
+.agenda{display:grid;grid-template-columns:320px 1fr;gap:12px;align-items:start}
+.form{display:grid;gap:8px}
+.form label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
+.form .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.week{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:12px}
+.day{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 6px;text-align:center;cursor:pointer}
+.day.today{border-color:var(--accent2)}
+.day.sel{background:var(--accent2);color:#1a1300;border-color:var(--accent2)}
+.day .dn{font-size:10px;color:inherit;opacity:.7;text-transform:uppercase}
+.day .dd{font-family:"Press Start 2P";font-size:12px;margin:4px 0}
+.day .dc{font-size:10px;min-height:14px}
+.filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.filters button{font-size:12px;padding:6px 10px;border-left:4px solid var(--c,var(--line))}
+.group h4{margin:14px 0 6px;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:flex;gap:8px;align-items:center}
+.group h4 .cnt{background:var(--panel2);border-radius:999px;padding:1px 8px;font-size:11px}
+.task{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:start;background:var(--panel);border:1px solid var(--line);border-left:5px solid var(--c,var(--gen));border-radius:10px;padding:10px;margin-bottom:6px}
+.task .chk{width:22px;height:22px;border-radius:6px;border:2px solid var(--muted);background:transparent;padding:0;display:grid;place-items:center;font-size:13px}
+.task.done{opacity:.55}
+.task.done .tt{text-decoration:line-through}
+.task.done .chk{background:var(--accent);border-color:var(--accent);color:#06281b}
+.task .tt{font-weight:600;cursor:pointer}
+.task .tm{font-size:11px;color:var(--muted);display:flex;gap:10px;flex-wrap:wrap;margin-top:3px}
+.task .tm .late{color:var(--danger)} .task .tm .soon{color:var(--accent2)}
+.task .td{font-size:12px;color:var(--muted);margin-top:4px;white-space:pre-wrap}
+.task .acts{display:flex;gap:4px}
+.task .acts button{padding:4px 8px;font-size:12px}
+.prio{font-size:10px;padding:1px 6px;border-radius:5px;background:#3a2f0f;color:var(--accent2)}
+.prio.p2{background:#3a1a26;color:var(--danger)}
+.empty{color:var(--muted);text-align:center;padding:30px 10px;border:1px dashed var(--line);border-radius:12px}
+
+/* ===== CUADERNOS ===== */
+.nb{display:grid;grid-template-columns:260px 1fr;gap:12px;align-items:start}
+.nb.focus{grid-template-columns:1fr}
+.nb.focus .nbside{display:none}
+.nbside{display:grid;gap:10px;position:sticky;top:12px;max-height:calc(100vh - 40px);overflow:auto}
+.subj{display:flex;align-items:center;gap:8px;width:100%;text-align:left;border-left:4px solid var(--c);font-size:12px;padding:7px 10px}
+.subj .k{margin-left:auto;color:var(--muted);font-size:11px}
+.subj.on{background:var(--panel2);border-color:var(--accent);color:var(--accent)}
+.notes-list{display:grid;gap:6px}
+.nitem{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px 10px;cursor:pointer;font-size:12px}
+.nitem.on{border-color:var(--accent)}
+.nitem .nd{color:var(--muted);font-size:10px;margin-top:2px}
+.editor{display:grid;gap:10px}
+.edbar{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.edbar .title{flex:1 1 220px;font-weight:800;font-size:15px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{border:0;border-radius:0;padding:7px 10px}
+.inktools{display:flex;gap:6px;flex-wrap:wrap;align-items:center;position:sticky;top:0;z-index:5;background:var(--bg);padding:6px 0}
+.sw{width:26px;height:26px;border-radius:50%;padding:0;border:2px solid var(--line)}
+.sw.on{outline:2px solid var(--accent);outline-offset:2px}
+.inktools input[type=range]{width:90px;padding:0}
+.pages{display:grid;gap:14px;justify-items:center}
+.page{position:relative;width:100%;max-width:900px;aspect-ratio:1000/1414;background:#f7f5ef;border-radius:6px;box-shadow:0 6px 24px #0008;overflow:hidden}
+.page canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
+.page.penonly canvas{touch-action:pan-y}
+.page .pn{position:absolute;right:10px;bottom:8px;font-size:10px;color:#9a9480;pointer-events:none}
+textarea.md{min-height:55vh;width:100%;resize:vertical;line-height:1.6}
+.mdview{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px 20px;min-height:40vh;line-height:1.65}
+.mdview h1,.mdview h2,.mdview h3{font-family:"JetBrains Mono";letter-spacing:0;margin:.6em 0 .3em}
+.mdview h1{font-size:20px}.mdview h2{font-size:17px}.mdview h3{font-size:15px}
+.mdview code{background:#0f1222;padding:1px 5px;border-radius:5px}
+.mdview pre{background:#0f1222;padding:10px;border-radius:8px;overflow:auto}
+.mdview a{color:var(--accent)}
+.mdview blockquote{border-left:3px solid var(--accent2);margin:6px 0;padding-left:10px;color:var(--muted)}
+.size{font-size:11px;color:var(--muted)}
+.size.warn{color:var(--danger)}
+
+/* dialog */
+dialog{background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:16px;padding:18px;width:min(520px,calc(100% - 32px))}
+dialog::backdrop{background:#000a}
+dialog h3{margin:0 0 12px;font-size:14px}
+dialog .acts{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
+
+footer{margin-top:24px;color:var(--muted);font-size:11px;text-align:center}
+footer a{color:var(--accent)}
+.toast{position:fixed;left:50%;bottom:calc(84px + var(--safe-b));transform:translate(-50%,200%);background:var(--panel2);border:2px solid var(--accent2);color:var(--text);padding:12px 16px;border-radius:12px;font-weight:800;z-index:50;transition:transform .35s cubic-bezier(.2,.9,.3,1.3);max-width:calc(100% - 32px);text-align:center;opacity:0;visibility:hidden;transition:transform .35s cubic-bezier(.2,.9,.3,1.3),opacity .2s,visibility .35s}
+.toast.show{transform:translate(-50%,0);opacity:1;visibility:visible}
+.pop{position:fixed;pointer-events:none;font-family:"Press Start 2P";font-size:12px;color:var(--accent);z-index:60;animation:pop 1s ease-out forwards}
+@keyframes pop{to{transform:translateY(-60px);opacity:0}}
+
+@media (max-width:900px){
+  .hud{grid-template-columns:repeat(2,1fr)}
+  .side,.agenda,.nb{grid-template-columns:1fr}
+  .nbside{position:static;max-height:none}
+  .board{grid-auto-columns:minmax(240px,82%)}
+  .tabs{display:none}
+  .bottomnav{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:40;background:#0d1020ee;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-top:1px solid var(--line);padding:6px 8px calc(6px + var(--safe-b))}
+  .bottomnav button{flex:1;border:0;background:transparent;display:grid;justify-items:center;gap:2px;font-size:11px;padding:6px}
+  .bottomnav button b{font-size:20px;font-weight:400}
+  .bottomnav button.on{color:var(--accent);background:transparent}
+  .week .dd{font-size:10px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="topbar">
+    <h1>UNAD <span>Quest</span></h1>
+    <span class="sync" id="sync" title="Sincronizar ahora">● local</span>
+    <nav class="tabs" id="tabs">
+      <button data-view="malla" class="on">🗺️ Malla</button>
+      <button data-view="agenda">📅 Agenda</button>
+      <button data-view="notas">📓 Cuadernos</button>
+    </nav>
+  </header>
+  <div class="banner" id="authBanner" hidden>🔐 Tu sesión de Cloudflare Access expiró. Tus cambios están guardados en este dispositivo. <button class="primary" onclick="location.reload()">Iniciar sesión</button></div>
+
+  <!-- ================= MALLA ================= -->
+  <section id="view-malla">
+    <p class="muted" style="margin:-4px 0 14px">Toca un curso: <b>pendiente → cursando → aprobado</b>. Mantén presionado (o doble clic) para ver sus cadenas.</p>
+    <section class="hud">
+      <div class="card stat"><div class="k">XP (créditos)</div><div class="v" id="xp">0 / 150</div><div class="xpbar"><i id="xpbar"></i></div><div class="s" id="xpPct">0%</div></div>
+      <div class="card stat"><div class="k">Nivel</div><div class="v" id="lvl">1</div><div class="xpbar gold"><i id="lvlbar"></i></div><div class="s" id="lvlName">Novato</div></div>
+      <div class="card stat"><div class="k">Cursando ahora</div><div class="v" id="doing">0 cr</div><div class="s" id="doingS">Ningún curso activo</div></div>
+      <div class="card stat"><div class="k">Grado proyectado</div><div class="countdown" id="countdown">—</div><div class="s">16-04 2029 · dic 2029</div></div>
+    </section>
+    <div class="toolbar">
+      <button id="tHomolog" class="on" title="Inglés A1, A2, B1 y B1+ homologados">🇬🇧 Inglés homologado</button>
+      <button id="tLocked">🔒 Atenuar bloqueados</button>
+      <button id="tFocus">🎯 Solo pendientes</button>
+      <span class="spacer"></span>
+      <button id="exportBtn">💾 Exportar</button>
+      <button id="importBtn">📂 Importar</button>
+      <button id="resetBtn" class="danger">♻️ Reiniciar malla</button>
+      <input type="file" id="importFile" accept="application/json" hidden>
+    </div>
+    <div class="legend" id="legend"></div>
+    <section class="board" id="board"></section>
+    <section class="side">
+      <div class="card"><h2 style="font-size:11px;margin:0">🏆 Logros</h2><div class="ach" id="ach"></div></div>
+      <div style="display:grid;gap:12px;align-content:start">
+        <div class="card detail" id="detail"><h4>Inspector de curso</h4><div class="muted">Mantén presionado o haz doble clic en un curso para ver sus prerrequisitos (amarillo) y lo que desbloquea (cian).</div></div>
+        <div class="card lines"><h2 style="font-size:11px;margin:0 0 6px">📊 Progreso por línea</h2><div id="lines"></div></div>
+      </div>
+    </section>
+  </section>
+
+  <!-- ================= AGENDA ================= -->
+  <section id="view-agenda" hidden>
+    <div class="agenda">
+      <div class="card">
+        <h2 style="font-size:11px;margin:0 0 12px">➕ Nueva tarea</h2>
+        <form class="form" id="taskForm" autocomplete="off">
+          <label for="tTitle">Qué hay que hacer</label>
+          <input id="tTitle" required maxlength="300" placeholder="Ej: Foro unidad 1, quiz, entrega fase 2…">
+          <label for="tCourse">Materia</label>
+          <select id="tCourse"></select>
+          <div class="row2">
+            <div style="display:grid;gap:6px"><label for="tDue">Fecha</label><input type="date" id="tDue"></div>
+            <div style="display:grid;gap:6px"><label for="tPrio">Prioridad</label>
+              <select id="tPrio"><option value="0">Normal</option><option value="1">Alta</option><option value="2">Urgente</option></select></div>
+          </div>
+          <label for="tDetails">Notas (opcional)</label>
+          <textarea id="tDetails" rows="3" maxlength="4000" placeholder="Enlace del aula, rúbrica, puntos…"></textarea>
+          <button class="primary" type="submit">Agregar tarea</button>
+        </form>
+        <p class="muted" style="font-size:12px;margin:12px 0 0">💡 Las materias que marques como <b>cursando</b> en la malla aparecen primero.</p>
+      </div>
+      <div>
+        <div class="week" id="week"></div>
+        <div class="filters" id="taskFilters"></div>
+        <div id="taskList"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= CUADERNOS ================= -->
+  <section id="view-notas" hidden>
+    <div class="nb" id="nb">
+      <aside class="nbside">
+        <div class="card" style="padding:10px;display:grid;gap:6px" id="subjects"></div>
+      </aside>
+      <div class="editor" id="editor"></div>
+    </div>
+  </section>
+
+  <footer>
+    Plan basado en la malla oficial de la UNAD (Resolución 005287 de 2026); prerrequisitos interpretados por línea — confirma con consejería.
+    · <a href="https://estudios.unad.edu.co/plan-de-estudios-ingenieria-en-inteligencia-artificial-y-ciencia-de-datos" target="_blank" rel="noopener">Malla UNAD</a>
+  </footer>
+</div>
+
+<nav class="bottomnav" id="bottomnav">
+  <button data-view="malla" class="on"><b>🗺️</b>Malla</button>
+  <button data-view="agenda"><b>📅</b>Agenda</button>
+  <button data-view="notas"><b>📓</b>Cuadernos</button>
+</nav>
+
+<dialog id="taskDlg">
+  <h3>Editar tarea</h3>
+  <form class="form" id="taskEdit" method="dialog">
+    <input id="eTitle" required maxlength="300">
+    <select id="eCourse"></select>
+    <div class="row2"><input type="date" id="eDue"><select id="ePrio"><option value="0">Normal</option><option value="1">Alta</option><option value="2">Urgente</option></select></div>
+    <textarea id="eDetails" rows="4" maxlength="4000" placeholder="Notas"></textarea>
+    <div class="acts"><button type="button" class="danger" id="eDelete">🗑️ Borrar</button><span style="flex:1"></span><button value="cancel" formnovalidate>Cancelar</button><button class="primary" value="save">Guardar</button></div>
+  </form>
+</dialog>
+
+<div class="toast" id="toast"></div>
+<script src="/app.js"></script>
+</body>
+</html>

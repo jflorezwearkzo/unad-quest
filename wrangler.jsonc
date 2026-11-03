@@ -1,11 +1,27 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "unad-quest",
+  "main": "src/worker.js",
   "compatibility_date": "2026-11-01",
   "workers_dev": true,
   "preview_urls": false,
   "assets": {
-    "directory": "./",
+    "directory": "./public",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*"],
     "not_found_handling": "single-page-application"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "unad-quest",
+      "database_id": "5cce61a9-4b11-43d0-a0fc-0b6574a4f92d",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "vars": {
+    "ACCESS_TEAM_DOMAIN": "jflorez.cloudflareaccess.com",
+    "ACCESS_AUD": "24e24a3e5494e850176ea08eb9bd070864d3275791f6958a35a57adf37511c29",
+    "ALLOWED_EMAILS": "javierflorez1018@gmail.com"
   }
 }
