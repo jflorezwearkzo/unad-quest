@@ -388,9 +388,10 @@ function bindAgenda(){
 function openTaskDlg(t){ editingTask=t; $("#eTitle").value=t.title; $("#eCourse").innerHTML=courseOptions(t.course_id); $("#eDue").value=t.due||""; $("#ePrio").value=String(t.priority||0); $("#eDetails").value=t.details||""; $("#taskDlg").showModal(); }
 
 /* ======================= CUADERNOS ======================= */
-let nbCourse=null, nbNote=null, nbMode="ink", nbFocus=false, showAllSubj=false;
+let nbCourse=null, nbNote=null, nbMode=null, nbFocus=false, showAllSubj=false;
+const defaultMode = () => (INK.sawPen || (navigator.maxTouchPoints>1 && matchMedia("(min-width: 700px)").matches && !matchMedia("(pointer: fine)").matches)) ? "ink" : "text";
 const PAGE_W=1000, PAGE_H=1414;
-const INK = {tool:"pen", color:"#1b1f3a", width:3, paper:"lines", penOnly:false, sawPen:false};
+const INK = {tool:"pen", color:"#1b1f3a", width:3, paper:"lines", penOnly:false, sawPen:false, txtSize:24, split:true};
 try{ Object.assign(INK, JSON.parse(localStorage.getItem("uq.ink")||"{}")); }catch(e){}
 const saveInkPrefs = () => { try{ localStorage.setItem("uq.ink", JSON.stringify(INK)); }catch(e){} };
 const PEN_COLORS=["#1b1f3a","#2457d6","#d62f4b","#1f8a5b","#8a3fd1","#e07b12"];
@@ -410,6 +411,7 @@ function renderSubjects(){
     + `<button class="ghost" data-sub="__toggle" style="font-size:12px">${showAllSubj?"Ocultar materias sin notas":"Ver todas las materias"}</button>`;
 }
 function renderNotebook(){
+  if(!nbMode) nbMode=defaultMode();
   renderSubjects();
   $("#nb").classList.toggle("focus",nbFocus);
   const list=notesFor(nbCourse);
@@ -433,11 +435,23 @@ function renderNotebook(){
 function renderNoteBody(n){
   const body=$("#nbBody");
   if(nbMode==="text"){
-    body.innerHTML=`<textarea class="md" id="nText" placeholder="# Apuntes&#10;&#10;- Escribe en Markdown: **negrita**, *cursiva*, \`código\`, listas, - [ ] pendientes…">${esc(n.body||"")}</textarea>`;
-    $("#nText").addEventListener("input",e=>{ n.body=e.target.value; markNote(n); });
+    body.innerHTML=`<div class="fmtbar" id="fmtBar">
+        <button data-fmt="h1" title="Título">H1</button><button data-fmt="h2" title="Subtítulo">H2</button>
+        <button data-fmt="b" title="Negrita (⌘B)"><b>B</b></button><button data-fmt="i" title="Cursiva (⌘I)"><i>I</i></button><button data-fmt="code" title="Código">&lt;/&gt;</button>
+        <button data-fmt="ul" title="Lista">• Lista</button><button data-fmt="todo" title="Pendiente">☐ Tarea</button><button data-fmt="quote" title="Cita">❝</button>
+        <button data-fmt="date" title="Insertar fecha">📅 Fecha</button>
+        <span style="flex:1"></span><button data-fmt="split" class="${INK.split!==false?"on":""}" title="Vista previa al lado">◫ Vista previa</button></div>
+      <div class="split ${INK.split!==false?"on":""}" id="splitWrap"><textarea class="md" id="nText" spellcheck="true" autocapitalize="sentences" placeholder="# Apuntes de clase&#10;&#10;Escribe libremente. Atajos: ⌘B negrita · ⌘I cursiva · Enter continúa las listas.&#10;&#10;- idea&#10;- [ ] pendiente">${esc(n.body||"")}</textarea><div class="mdview live" id="livePrev"></div></div>`;
+    const ta=$("#nText"), prev=$("#livePrev");
+    const upd=()=>{ prev.innerHTML = ta.value ? md(ta.value) : '<span class="muted">La vista previa aparece aquí.</span>'; };
+    upd();
+    ta.addEventListener("input",()=>{ n.body=ta.value; markNote(n); upd(); });
+    ta.addEventListener("keydown",e=>mdKeys(e,ta));
+    if(!("ontouchstart" in window)) ta.focus();
   } else if(nbMode==="view"){
     const inkPages=(n.ink?.pages||[]).filter(p=>p.length).length;
-    body.innerHTML=`<div class="mdview">${n.body?md(n.body):'<span class="muted">Sin texto todavía. Cambia a 📝 Texto para escribir.</span>'}</div>${inkPages?`<p class="muted" style="font-size:12px">✍️ Esta nota tiene ${inkPages} página(s) con tinta.</p>`:""}`;
+    body.innerHTML=`<div class="mdview">${n.body?md(n.body):'<span class="muted">Sin texto todavía. Cambia a 📝 Texto para escribir.</span>'}</div>${inkPages?`<p class="muted" style="font-size:12px">✍️ ${inkPages} página(s) con tinta:</p><div class="pages" id="pages"></div>`:""}`;
+    if(inkPages){ mountInk(n,true); }
   } else {
     if(!n.ink) n.ink={pages:[[]]};
     body.innerHTML=inkToolbar()+`<div class="pages" id="pages"></div><div style="display:flex;gap:8px;justify-content:center;margin-top:12px"><button data-ink="addpage">＋ Página</button><span class="size" id="inkSize"></span></div>`;
@@ -446,11 +460,12 @@ function renderNoteBody(n){
 }
 function inkToolbar(){
   const cols = INK.tool==="hl" ? HL_COLORS : PEN_COLORS;
+  const sizeSel = INK.tool==="text" ? `<select id="txtSize" title="Tamaño del texto">${[16,20,24,32,44].map(z=>`<option value="${z}" ${+INK.txtSize===z?"selected":""}>${z}px</option>`).join("")}</select>` : `<input type="range" min="1" max="12" step="0.5" value="${INK.width}" id="inkW" title="Grosor">`;
   if(!cols.includes(INK.color)) INK.color = cols[0];
   return `<div class="inktools" id="inkTools">
-    <div class="seg"><button data-tool="pen" class="${INK.tool==="pen"?"on":""}" title="Lápiz">🖊️</button><button data-tool="hl" class="${INK.tool==="hl"?"on":""}" title="Resaltador">🖍️</button><button data-tool="eraser" class="${INK.tool==="eraser"?"on":""}" title="Borrador">🧽</button></div>
+    <div class="seg"><button data-tool="pen" class="${INK.tool==="pen"?"on":""}" title="Lápiz">🖊️</button><button data-tool="hl" class="${INK.tool==="hl"?"on":""}" title="Resaltador">🖍️</button><button data-tool="text" class="${INK.tool==="text"?"on":""}" title="Texto con teclado: toca la página">🔤</button><button data-tool="eraser" class="${INK.tool==="eraser"?"on":""}" title="Borrador">🧽</button></div>
     ${cols.map(c=>`<button class="sw ${INK.color===c?"on":""}" data-color="${c}" style="background:${c}" aria-label="Color ${c}"></button>`).join("")}
-    <input type="range" min="1" max="12" step="0.5" value="${INK.width}" id="inkW" title="Grosor">
+    ${sizeSel}
     <button data-ink="undo" title="Deshacer">↶</button><button data-ink="redo" title="Rehacer">↷</button>
     <select id="paper" title="Papel"><option value="lines" ${INK.paper==="lines"?"selected":""}>Rayado</option><option value="grid" ${INK.paper==="grid"?"selected":""}>Cuadrícula</option><option value="dots" ${INK.paper==="dots"?"selected":""}>Puntos</option><option value="blank" ${INK.paper==="blank"?"selected":""}>Blanco</option></select>
     <button data-ink="penonly" class="${INK.penOnly?"on":""}" title="Solo Apple Pencil: el dedo hace scroll">✏️ Solo lápiz</button>
@@ -460,10 +475,9 @@ function inkToolbar(){
 
 /* ---- motor de tinta ---- */
 let inkState=null; // {note, canvases:[], undo:[], redo:[]}
-function mountInk(n){
-  const wrap=$("#pages");
-  inkState={note:n, canvases:[], undo:[], redo:[]};
-  n.ink.pages.forEach((_,i)=>addPageEl(i));
+function mountInk(n, readonly=false){
+  inkState={note:n, canvases:[], undo:[], redo:[], readonly, editing:null};
+  n.ink.pages.forEach((p,i)=>{ if(!readonly || p.length) addPageEl(i); });
   updateInkSize();
 }
 function addPageEl(i){
@@ -472,7 +486,7 @@ function addPageEl(i){
   const cv=document.createElement("canvas"); page.appendChild(cv);
   const pn=document.createElement("div"); pn.className="pn"; pn.textContent=`${i+1}`; page.appendChild(pn);
   wrap.appendChild(page); inkState.canvases[i]=cv;
-  sizeCanvas(cv); redrawPage(i); bindCanvas(cv,i);
+  sizeCanvas(cv); redrawPage(i); if(!inkState.readonly) bindCanvas(cv,i);
 }
 function sizeCanvas(cv){ const r=cv.getBoundingClientRect(); const dpr=Math.min(window.devicePixelRatio||1,2.5); cv.width=Math.max(1,Math.round(r.width*dpr)); cv.height=Math.max(1,Math.round(r.height*dpr)); cv._scale=cv.width/PAGE_W; }
 function drawPaper(ctx,s){
@@ -483,7 +497,31 @@ function drawPaper(ctx,s){
   if(INK.paper==="dots"){ ctx.fillStyle="#c3cbdc"; for(let x=40;x<=PAGE_W-40;x+=32) for(let y=40;y<=PAGE_H-40;y+=32){ctx.beginPath();ctx.arc(x,y,1.4,0,7);ctx.fill();} }
   ctx.restore();
 }
+const TXT_FONT = z => `${z}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+const measureCtx = document.createElement("canvas").getContext("2d");
+function wrapText(item){
+  measureCtx.font=TXT_FONT(item.z); const maxW=item.w; const out=[];
+  for(const para of String(item.v).split("\n")){
+    if(!para){ out.push(""); continue; }
+    let line="";
+    for(const word of para.split(/(\s+)/)){
+      const test=line+word;
+      if(measureCtx.measureText(test).width>maxW && line.trim()){ out.push(line.trimEnd()); line=word.trimStart(); }
+      else line=test;
+      while(measureCtx.measureText(line).width>maxW && line.length>1){ // palabra larguísima
+        let k=line.length; while(k>1 && measureCtx.measureText(line.slice(0,k)).width>maxW) k--; out.push(line.slice(0,k)); line=line.slice(k); }
+    }
+    out.push(line);
+  }
+  return out;
+}
+const txtBox = it => { const lines=wrapText(it); return {x:it.x, y:it.y, w:it.w, h:Math.max(1,lines.length)*it.z*1.35, lines}; };
+function drawText(ctx,it,s){
+  const b=txtBox(it); ctx.save(); ctx.scale(s,s); ctx.fillStyle=it.c; ctx.font=TXT_FONT(it.z); ctx.textBaseline="top";
+  b.lines.forEach((l,k)=>ctx.fillText(l,it.x,it.y+k*it.z*1.35+it.z*.12)); ctx.restore();
+}
 function drawStroke(ctx,st,s){
+  if(st.t==="txt") return drawText(ctx,st,s);
   const pts=st.p; if(!pts.length) return;
   ctx.save(); ctx.scale(s,s); ctx.lineCap="round"; ctx.lineJoin="round"; ctx.strokeStyle=st.c;
   if(st.t==="hl"){ ctx.globalAlpha=.38; ctx.globalCompositeOperation="multiply"; ctx.lineWidth=st.w*5; ctx.beginPath(); ctx.moveTo(pts[0][0],pts[0][1]); for(let i=1;i<pts.length;i++) ctx.lineTo(pts[i][0],pts[i][1]); if(pts.length===1) ctx.lineTo(pts[0][0]+.1,pts[0][1]); ctx.stroke(); ctx.restore(); return; }
@@ -505,19 +543,21 @@ function redrawPage(i){
   drawPaper(ctx,s);
   const strokes=inkState.note.ink.pages[i]||[];
   strokes.filter(x=>x.t==="hl").forEach(st=>drawStroke(ctx,st,s));   // resaltador debajo
-  strokes.filter(x=>x.t!=="hl").forEach(st=>drawStroke(ctx,st,s));
+  strokes.filter(x=>x.t!=="hl" && x!==inkState.editing?.item).forEach(st=>drawStroke(ctx,st,s));
 }
 function bindCanvas(cv,i){
   let cur=null, pid=null;
   const pt = e => { const r=cv.getBoundingClientRect(); const x=(e.clientX-r.left)/r.width*PAGE_W, y=(e.clientY-r.top)/r.height*PAGE_H;
     const p = e.pointerType==="mouse" ? .6 : (e.pressure>0 ? e.pressure : .5);
     return [Math.round(x*2)/2, Math.round(y*2)/2, Math.round(p*100)/100]; };
-  const allowed = e => { if(e.pointerType==="pen"){ if(!INK.sawPen){ INK.sawPen=true; INK.penOnly=true; saveInkPrefs(); document.querySelectorAll(".page").forEach(p=>p.classList.add("penonly")); const b=document.querySelector('[data-ink="penonly"]'); if(b) b.classList.add("on"); toast("✏️ Apple Pencil detectado: ahora el dedo hace scroll"); } return true; }
+  const allowed = e => { if(INK.tool==="text") return true;
+    if(e.pointerType==="pen"){ if(!INK.sawPen){ INK.sawPen=true; INK.penOnly=true; saveInkPrefs(); document.querySelectorAll(".page").forEach(p=>p.classList.add("penonly")); const b=document.querySelector('[data-ink="penonly"]'); if(b) b.classList.add("on"); toast("✏️ Apple Pencil detectado: ahora el dedo hace scroll"); } return true; }
     return !(INK.penOnly && e.pointerType==="touch"); };
   // iOS: el lápiz no debe hacer scroll aunque el dedo sí
   cv.addEventListener("touchstart",e=>{ if([...e.touches].some(t=>t.touchType==="stylus")) e.preventDefault(); },{passive:false});
   cv.addEventListener("touchmove",e=>{ if([...e.touches].some(t=>t.touchType==="stylus") || (!INK.penOnly)) e.preventDefault(); },{passive:false});
   cv.addEventListener("pointerdown",e=>{
+    if(INK.tool==="text") return;   // se maneja en "click" para que iOS abra el teclado
     if(!allowed(e) || (e.button && e.button!==0)) return;
     e.preventDefault(); cv.setPointerCapture(e.pointerId); pid=e.pointerId;
     if(INK.tool==="eraser"){ eraseAt(i,pt(e)); cur={erase:true}; return; }
@@ -537,23 +577,58 @@ function bindCanvas(cv,i){
     if(!cur.erase && cur.p.length){ const page=inkState.note.ink.pages[i]; page.push(cur); inkState.undo.push({op:"add",page:i,stroke:cur}); inkState.redo=[]; redrawPage(i); markNote(inkState.note,1200); }
     cur=null; pid=null;
   };
+  cv.addEventListener("click",e=>{ if(INK.tool!=="text") return; const [x,y]=pt(e); textAt(i,x,y); });
   cv.addEventListener("pointerup",end); cv.addEventListener("pointercancel",end); cv.addEventListener("lostpointercapture",end);
 }
 function eraseAt(i,[x,y]){
   const page=inkState.note.ink.pages[i]; const R=14; let hit=false;
   for(let k=page.length-1;k>=0;k--){ const st=page[k]; const rr=R+st.w*(st.t==="hl"?2.5:.5);
-    if(st.p.some(p=>Math.abs(p[0]-x)<rr && Math.abs(p[1]-y)<rr)){ inkState.undo.push({op:"del",page:i,stroke:st,idx:k}); page.splice(k,1); hit=true; } }
+    const hitTxt = st.t==="txt" && (()=>{ const b=txtBox(st); return x>=b.x-6 && x<=b.x+b.w+6 && y>=b.y-6 && y<=b.y+b.h+6; })();
+    if(hitTxt || (st.p && st.p.some(p=>Math.abs(p[0]-x)<rr && Math.abs(p[1]-y)<rr))){ inkState.undo.push({op:"del",page:i,stroke:st,idx:k}); page.splice(k,1); hit=true; } }
   if(hit){ inkState.redo=[]; redrawPage(i); markNote(inkState.note,1200); }
 }
+function textAt(i,x,y){
+  if(inkState.editing) commitText();
+  const page=inkState.note.ink.pages[i];
+  let item=[...page].reverse().find(st=>st.t==="txt" && (()=>{ const b=txtBox(st); return x>=b.x-8 && x<=b.x+b.w+8 && y>=b.y-8 && y<=b.y+b.h+8; })());
+  const isNew=!item;
+  if(isNew){ const z=+INK.txtSize||24; item={t:"txt", x:Math.max(30,Math.min(x,PAGE_W-120)), y:Math.max(20,y-z*.6), w:Math.max(160,PAGE_W-50-Math.max(30,Math.min(x,PAGE_W-120))), z, c:PEN_COLORS.includes(INK.color)?INK.color:PEN_COLORS[0], v:""}; }
+  const before = isNew ? null : {...item};
+  inkState.editing={page:i,item,isNew,before};
+  redrawPage(i);
+  const pageEl=inkState.canvases[i].parentElement; const k=pageEl.clientWidth/PAGE_W;
+  const ta=document.createElement("textarea"); ta.className="txtedit"; ta.value=item.v;
+  ta.setAttribute("autocapitalize","sentences"); ta.spellcheck=true;
+  Object.assign(ta.style,{left:item.x*k+"px", top:item.y*k+"px", width:item.w*k+"px", fontSize:item.z*k+"px", color:item.c, fontFamily:TXT_FONT(1).replace(/^1px /,"")});
+  const fit=()=>{ ta.style.height="auto"; ta.style.height=Math.max(item.z*1.4*k, ta.scrollHeight)+"px"; };
+  ta.addEventListener("input",()=>{ item.v=ta.value; fit(); });
+  ta.addEventListener("keydown",e=>{ if(e.key==="Escape"){ e.preventDefault(); ta.blur(); } if(e.key==="Enter" && (e.metaKey||e.ctrlKey)){ e.preventDefault(); ta.blur(); } });
+  ta.addEventListener("blur",()=>commitText());
+  ta.addEventListener("pointerdown",e=>e.stopPropagation());
+  pageEl.appendChild(ta); fit(); ta.focus({preventScroll:true});
+  inkState.editing.el=ta;
+}
+function commitText(){
+  const ed=inkState?.editing; if(!ed) return; inkState.editing=null;
+  const page=inkState.note.ink.pages[ed.page]; const item=ed.item;
+  item.v=item.v.replace(/\s+$/,"");
+  ed.el?.remove();
+  if(ed.isNew){ if(item.v){ page.push(item); inkState.undo.push({op:"add",page:ed.page,stroke:item}); inkState.redo=[]; } }
+  else if(!item.v){ const k=page.indexOf(item); if(k>=0){ page.splice(k,1); inkState.undo.push({op:"del",page:ed.page,stroke:{...ed.before},idx:k}); } }
+  else if(item.v!==ed.before.v){ inkState.undo.push({op:"edit",page:ed.page,stroke:item,before:ed.before,after:{...item}}); inkState.redo=[]; }
+  redrawPage(ed.page); markNote(inkState.note,600);
+}
 function inkUndo(){ const a=inkState.undo.pop(); if(!a) return; const page=inkState.note.ink.pages[a.page];
-  if(a.op==="add"){ const k=page.lastIndexOf(a.stroke); if(k>=0) page.splice(k,1); } else page.splice(Math.min(a.idx,page.length),0,a.stroke);
+  if(a.op==="edit") Object.assign(a.stroke,a.before);
+  else if(a.op==="add"){ const k=page.lastIndexOf(a.stroke); if(k>=0) page.splice(k,1); } else page.splice(Math.min(a.idx,page.length),0,a.stroke);
   inkState.redo.push(a); redrawPage(a.page); markNote(inkState.note,800); }
 function inkRedo(){ const a=inkState.redo.pop(); if(!a) return; const page=inkState.note.ink.pages[a.page];
-  if(a.op==="add") page.push(a.stroke); else { const k=page.indexOf(a.stroke); if(k>=0) page.splice(k,1); }
+  if(a.op==="edit") Object.assign(a.stroke,a.after);
+  else if(a.op==="add") page.push(a.stroke); else { const k=page.indexOf(a.stroke); if(k>=0) page.splice(k,1); }
   inkState.undo.push(a); redrawPage(a.page); markNote(inkState.note,800); }
 function updateInkSize(){ const el=$("#inkSize"); if(!el||!inkState) return; const b=JSON.stringify(inkState.note.ink).length; el.textContent=`${(b/1024).toFixed(0)} KB de tinta`; el.classList.toggle("warn",b>1.5e6); if(b>1.5e6) el.textContent+=" · ⚠️ cerca del límite: crea otra nota"; }
 let resizeT=null;
-window.addEventListener("resize",()=>{ clearTimeout(resizeT); resizeT=setTimeout(()=>{ if(inkState && $("#pages")) inkState.canvases.forEach((cv,i)=>{ sizeCanvas(cv); redrawPage(i); }); },150); });
+window.addEventListener("resize",()=>{ clearTimeout(resizeT); resizeT=setTimeout(()=>{ if(inkState?.editing) commitText(); if(inkState && $("#pages")) inkState.canvases.forEach((cv,i)=>{ sizeCanvas(cv); redrawPage(i); }); },150); });
 
 let noteT=null;
 function markNote(n,delay=600){ n.updated_at=Date.now(); n._dirty=true; DB.notes[n.id]=n; clearTimeout(noteT); noteT=setTimeout(()=>{ persist(); scheduleSync(2500); updateInkSize(); },delay); }
@@ -562,15 +637,17 @@ function bindNotebook(){
   $("#subjects").addEventListener("click",e=>{ const b=e.target.closest("[data-sub]"); if(!b) return; if(b.dataset.sub==="__toggle"){ showAllSubj=!showAllSubj; renderSubjects(); return; } nbCourse=b.dataset.sub; nbNote=null; renderNotebook(); });
   $("#editor").addEventListener("click",e=>{
     const o=e.target.closest("[data-open]"); if(o){ nbNote=o.dataset.open; renderNotebook(); return; }
+    const f=e.target.closest("[data-fmt]"); if(f){ fmt(f.dataset.fmt, f); return; }
     const b=e.target.closest("[data-nb],[data-mode],[data-tool],[data-color],[data-ink]"); if(!b) return;
     const n=nbNote?DB.notes[nbNote]:null;
     if(b.dataset.nb==="new"){ const now=Date.now(); const nn={id:uid(),course_id:nbCourse,title:`Clase ${new Date().toLocaleDateString("es-CO",{day:"numeric",month:"short"})}`,body:"",ink:{pages:[[]]},deleted:false,created_at:now,updated_at:now,_dirty:true};
-      DB.notes[nn.id]=nn; persist(); scheduleSync(); nbNote=nn.id; nbMode="ink"; renderNotebook(); const f=evalAch(); if(f.length){toast(`🏆 ${f.map(a=>a.t).join(", ")}`);confetti();} return; }
+      DB.notes[nn.id]=nn; persist(); scheduleSync(); nbNote=nn.id; nbMode=defaultMode(); renderNotebook(); const f=evalAch(); if(f.length){toast(`🏆 ${f.map(a=>a.t).join(", ")}`);confetti();} return; }
     if(b.dataset.nb==="del" && n){ if(confirm("¿Borrar esta nota?")){ n.deleted=true; markNote(n,0); nbNote=null; renderNotebook(); toast("🗑️ Nota borrada"); } return; }
     if(b.dataset.nb==="focus"){ nbFocus=!nbFocus; renderNotebook(); window.scrollTo({top:0}); return; }
-    if(b.dataset.mode){ nbMode=b.dataset.mode; renderNotebook(); return; }
-    if(b.dataset.tool){ INK.tool=b.dataset.tool; saveInkPrefs(); const tb=$("#inkTools"); tb.outerHTML=inkToolbar(); return; }
-    if(b.dataset.color){ INK.color=b.dataset.color; saveInkPrefs(); document.querySelectorAll(".sw").forEach(s=>s.classList.toggle("on",s.dataset.color===INK.color)); return; }
+    if(b.dataset.mode){ if(inkState?.editing) commitText(); nbMode=b.dataset.mode; renderNotebook(); return; }
+    if(b.dataset.tool){ if(inkState?.editing) commitText(); INK.tool=b.dataset.tool; if(INK.tool==="text") toast("🔤 Toca la página donde quieras escribir con el teclado"); saveInkPrefs(); const tb=$("#inkTools"); tb.outerHTML=inkToolbar(); return; }
+    if(b.dataset.color){ INK.color=b.dataset.color; saveInkPrefs(); document.querySelectorAll(".sw").forEach(s=>s.classList.toggle("on",s.dataset.color===INK.color));
+      const ed=inkState?.editing; if(ed && PEN_COLORS.includes(INK.color)){ ed.item.c=INK.color; ed.el.style.color=INK.color; ed.el.focus(); } return; }
     if(b.dataset.ink==="undo") return inkUndo();
     if(b.dataset.ink==="redo") return inkRedo();
     if(b.dataset.ink==="addpage" && n){ n.ink.pages.push([]); addPageEl(n.ink.pages.length-1); markNote(n); $("#pages").lastElementChild.scrollIntoView({behavior:"smooth"}); return; }
@@ -581,10 +658,45 @@ function bindNotebook(){
     if(e.target.id==="nTitle" && nbNote){ const n=DB.notes[nbNote]; n.title=e.target.value; markNote(n,800); }
     if(e.target.id==="inkW"){ INK.width=+e.target.value; saveInkPrefs(); }
   });
-  $("#editor").addEventListener("change",e=>{ if(e.target.id==="paper"){ INK.paper=e.target.value; saveInkPrefs(); inkState?.canvases.forEach((_,i)=>redrawPage(i)); } });
-  document.addEventListener("keydown",e=>{ if($("#view-notas").hidden || nbMode!=="ink" || !inkState) return; if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==="z"){ e.preventDefault(); e.shiftKey?inkRedo():inkUndo(); } });
+  $("#editor").addEventListener("change",e=>{ if(e.target.id==="txtSize"){ INK.txtSize=+e.target.value; saveInkPrefs(); }
+    if(e.target.id==="paper"){ INK.paper=e.target.value; saveInkPrefs(); inkState?.canvases.forEach((_,i)=>redrawPage(i)); } });
+  document.addEventListener("keydown",e=>{ if($("#view-notas").hidden || nbMode!=="ink" || !inkState || inkState.editing) return; if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==="z"){ e.preventDefault(); e.shiftKey?inkRedo():inkUndo(); } });
 }
 function visiblePage(){ let best=0,bd=1e9; inkState.canvases.forEach((cv,i)=>{ const r=cv.getBoundingClientRect(); const d=Math.abs(r.top+r.height/2-innerHeight/2); if(d<bd){bd=d;best=i;} }); return best; }
+
+/* Barra de formato y atajos de teclado del modo Texto */
+function wrapSel(ta,pre,post=pre,ph="texto"){
+  const {selectionStart:a, selectionEnd:b, value:v}=ta; const sel=v.slice(a,b)||ph;
+  ta.setRangeText(pre+sel+post,a,b,"end"); if(a===b){ ta.selectionStart=a+pre.length; ta.selectionEnd=a+pre.length+sel.length; }
+  ta.dispatchEvent(new Event("input")); ta.focus();
+}
+function linePrefix(ta,prefix){
+  const v=ta.value, a=ta.selectionStart, b=ta.selectionEnd;
+  const ls=v.lastIndexOf("\n",a-1)+1; let le=v.indexOf("\n",b); if(le<0) le=v.length;
+  const block=v.slice(ls,le).split("\n").map(l=>{ const clean=l.replace(/^(#{1,3}\s|[-*]\s\[[ x]\]\s|[-*]\s|>\s)/,""); return l.startsWith(prefix)?clean:prefix+clean; }).join("\n");
+  ta.setRangeText(block,ls,le,"end"); ta.dispatchEvent(new Event("input")); ta.focus();
+}
+function fmt(kind,btn){
+  if(kind==="split"){ INK.split=!(INK.split!==false); saveInkPrefs(); btn.classList.toggle("on",INK.split); $("#splitWrap").classList.toggle("on",INK.split); return; }
+  const ta=$("#nText"); if(!ta) return;
+  ({h1:()=>linePrefix(ta,"# "), h2:()=>linePrefix(ta,"## "), b:()=>wrapSel(ta,"**"), i:()=>wrapSel(ta,"*"), code:()=>wrapSel(ta,"`","`","código"),
+    ul:()=>linePrefix(ta,"- "), todo:()=>linePrefix(ta,"- [ ] "), quote:()=>linePrefix(ta,"> "),
+    date:()=>{ ta.setRangeText(new Date().toLocaleDateString("es-CO",{weekday:"long",day:"numeric",month:"long",year:"numeric"}),ta.selectionStart,ta.selectionEnd,"end"); ta.dispatchEvent(new Event("input")); ta.focus(); }})[kind]?.();
+}
+function mdKeys(e,ta){
+  const mod=e.metaKey||e.ctrlKey;
+  if(mod && e.key.toLowerCase()==="b"){ e.preventDefault(); return wrapSel(ta,"**"); }
+  if(mod && e.key.toLowerCase()==="i"){ e.preventDefault(); return wrapSel(ta,"*"); }
+  if(e.key==="Tab"){ e.preventDefault(); ta.setRangeText("  ",ta.selectionStart,ta.selectionEnd,"end"); ta.dispatchEvent(new Event("input")); return; }
+  if(e.key==="Enter" && !e.shiftKey && !mod && !e.isComposing){
+    const v=ta.value, a=ta.selectionStart; const ls=v.lastIndexOf("\n",a-1)+1; const line=v.slice(ls,a);
+    const m=line.match(/^(\s*)([-*]\s\[[ x]\]\s|[-*]\s|(\d+)\.\s)/);
+    if(m){ e.preventDefault();
+      if(line.trim()===m[0].trim()){ ta.setRangeText("",ls,a,"end"); }   // lista vacía: salir
+      else { let next=m[2].replace("[x]","[ ]"); if(m[3]) next=(+m[3]+1)+". "; ta.setRangeText("\n"+m[1]+next,a,ta.selectionEnd,"end"); }
+      ta.dispatchEvent(new Event("input")); }
+  }
+}
 
 /* Markdown mínimo y seguro (escapa primero) */
 function md(src){
@@ -599,6 +711,7 @@ function md(src){
     if((m=l.match(/^(#{1,3})\s+(.*)/))){ closeList(); out+=`<h${m[1].length}>${inline(m[2])}</h${m[1].length}>`; continue; }
     if((m=l.match(/^\s*[-*]\s+\[( |x)\]\s+(.*)/i))){ if(!inList){out+='<ul style="list-style:none;padding-left:4px">';inList=true;} out+=`<li>${m[1].trim()?"☑️":"⬜"} ${inline(m[2])}</li>`; continue; }
     if((m=l.match(/^\s*[-*]\s+(.*)/))){ if(!inList){out+="<ul>";inList=true;} out+=`<li>${inline(m[1])}</li>`; continue; }
+    if((m=l.match(/^\s*(\d+)\.\s+(.*)/))){ closeList(); out+=`<p style="margin:2px 0"><b>${m[1]}.</b> ${inline(m[2])}</p>`; continue; }
     if((m=l.match(/^&gt;\s?(.*)/))){ closeList(); out+=`<blockquote>${inline(m[1])}</blockquote>`; continue; }
     closeList(); out+= l.trim()? `<p>${inline(l)}</p>` : "";
   }

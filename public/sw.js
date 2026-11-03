@@ -1,6 +1,6 @@
 // UNAD Quest service worker — red primero para la app, caché como respaldo sin conexión.
 // Nunca cachea /api/* ni respuestas de login de Cloudflare Access.
-const CACHE = "uq-shell-v2";
+const CACHE = "uq-shell-v3";
 const SHELL = ["/", "/index.html", "/app.js", "/manifest.webmanifest", "/icons/icon-192.png", "/icons/icon-512.png", "/icons/apple-touch-icon.png"];
 
 self.addEventListener("install", (e) => {
