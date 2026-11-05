@@ -8,15 +8,15 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/jflorezwearkzo/unad-quest.git"
+    "url": "git+https://github.com/zylarion/unad-quest.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/jflorezwearkzo/unad-quest/issues"
+    "url": "https://github.com/zylarion/unad-quest/issues"
   },
-  "homepage": "https://github.com/jflorezwearkzo/unad-quest#readme",
+  "homepage": "https://github.com/zylarion/unad-quest#readme",
   "devDependencies": {
     "wrangler": "^4.157.0"
   }
