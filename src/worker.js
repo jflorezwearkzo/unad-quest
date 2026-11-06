@@ -115,9 +115,12 @@ async function verifyAccess(request, env) {
   if (!aud.includes(env.ACCESS_AUD)) throw new Error("bad audience");
   if (payload.iss !== `https://${env.ACCESS_TEAM_DOMAIN}`) throw new Error("bad issuer");
   const nowS = Math.floor(Date.now() / 1000);
-  if (payload.exp && payload.exp < nowS) throw new Error("expired");
+  // Access siempre emite exp; un token sin exp (o aún no válido) se rechaza.
+  if (typeof payload.exp !== "number" || payload.exp < nowS) throw new Error("expired");
+  if (typeof payload.nbf === "number" && payload.nbf > nowS + 60) throw new Error("not yet valid");
 
   const keys = await getCerts(env);
+  if (header.alg !== "RS256") throw new Error("bad alg");
   const jwk = keys.find((k) => k.kid === header.kid);
   if (!jwk) throw new Error("unknown key");
   const key = await crypto.subtle.importKey("jwk", jwk, { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["verify"]);

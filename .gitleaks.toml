@@ -1,0 +1,8 @@
+# Identificadores públicos de Cloudflare Access (no son secretos): audiencia y dominio del equipo.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Identificadores públicos de Cloudflare Access en wrangler.jsonc"
+regexTarget = "line"
+regexes = ['''"ACCESS_AUD": "[0-9a-f]{64}"''']
