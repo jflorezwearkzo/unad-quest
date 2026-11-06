@@ -1,0 +1,19 @@
+name: Tarea o mejora
+description: Algo para construir o cambiar en UNAD Quest
+labels: [tarea]
+body:
+  - type: textarea
+    id: que
+    attributes:
+      label: Qué se necesita
+    validations:
+      required: true
+  - type: textarea
+    id: criterio
+    attributes:
+      label: Cómo sabremos que está listo
+  - type: dropdown
+    id: area
+    attributes:
+      label: Área
+      options: [Juego, Tareas, Cuaderno, Worker / API, D1, CI, Docs]

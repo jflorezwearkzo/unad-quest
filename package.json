@@ -1,23 +1,29 @@
 {
   "name": "unad-quest",
   "version": "1.0.0",
-  "description": "Mi carrera de **Ingeniería en Inteligencia Artificial y Ciencia de Datos (UNAD)** convertida en un juego.",
-  "main": "index.js",
+  "description": "Mi carrera de Ingeniería en Inteligencia Artificial y Ciencia de Datos (UNAD) convertida en un juego.",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "wrangler dev",
+    "check": "node --check src/worker.js && node --check public/app.js && node --check public/sw.js",
+    "build": "wrangler deploy --dry-run --outdir .wrangler/dry-run",
+    "ci": "npm run check && npm run build"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/zylarion/unad-quest.git"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "author": "Javier S. Flórez",
+  "license": "UNLICENSED",
   "bugs": {
     "url": "https://github.com/zylarion/unad-quest/issues"
   },
   "homepage": "https://github.com/zylarion/unad-quest#readme",
   "devDependencies": {
     "wrangler": "^4.157.0"
+  },
+  "private": true,
+  "engines": {
+    "node": ">=22"
   }
 }

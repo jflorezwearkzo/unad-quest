@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  titulo:
+    name: Título en Conventional Commits
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Revisar el título del PR
+        env:
+          TITULO: ${{ github.event.pull_request.title }}
+        run: |
+          if ! printf '%s' "$TITULO" | grep -Eq '^(feat|fix|security|chore|docs|refactor|test|ci|perf|build|revert|release)(\([a-z0-9._/-]+\))?!?: .+'; then
+            echo "::error::El título debe seguir Conventional Commits, p. ej. 'fix(cuaderno): …'"; exit 1
+          fi
+
+  build:
+    name: Sintaxis y empaquetado del worker
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      - run: npm run build

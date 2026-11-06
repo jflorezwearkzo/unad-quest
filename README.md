@@ -16,11 +16,16 @@ Mi carrera de **Ingeniería en Inteligencia Artificial y Ciencia de Datos (UNAD)
 - Despliegue automático con Workers Builds en cada push a `main`.
 
 ## Local
+Requiere Node 22 (`.nvmrc`).
+
 ```bash
-npm i
+npm ci
 echo 'DEV_EMAIL=tu@correo' > .dev.vars
 npx wrangler d1 migrations apply DB --local
 npx wrangler dev
+npm run ci          # sintaxis + empaquetado (lo mismo que corre el CI)
 ```
+
+Cómo se trabaja (ramas, PRs, commits): [CONTRIBUTING.md](CONTRIBUTING.md). Seguridad: [SECURITY.md](SECURITY.md).
 
 > Prerrequisitos interpretados a partir de las líneas de la malla oficial (Resolución 005287 de 2026). Confirmar con consejería antes de matricular.
